@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>PRAHARI-X India Monitor</title>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+
+background:#0b1220;
+color:white;
+font-family:Arial;
+margin:0;
+padding:0;
+
+}
+
+.header{
+
+background:#111827;
+padding:20px;
+text-align:center;
+border-bottom:2px solid cyan;
+
+}
+
+.card{
+
+background:#1f2937;
+padding:20px;
+margin:15px;
+border-radius:10px;
+
+}
+
+table{
+
+width:100%;
+border-collapse:collapse;
+
+}
+
+th{
+
+background:#111827;
+padding:12px;
+
+}
+
+td{
+
+padding:12px;
+border-bottom:1px solid #374151;
+
+}
+
+a{
+
+color:cyan;
+text-decoration:none;
+
+}
+
+.status{
+
+background:#065f46;
+padding:15px;
+border-radius:10px;
+font-size:20px;
+font-weight:bold;
+text-align:center;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>
+🇮🇳 INDIA MONITOR
+</h1>
+
+<p>
+India Regional Threat Monitoring System
+</p>
+
+</div>
+
+<div class="card">
+
+<a href="/">
+🏠 Back To Dashboard
+</a>
+
+</div>
+
+<div class="card status">
+
+🟢 INDIA THREAT STATUS ACTIVE
+
+</div>
+
+<div class="card">
+
+<h2>
+🌍 India Region Events
+</h2>
+
+<table>
+
+<tr>
+
+<th>Location</th>
+
+<th>Magnitude</th>
+
+<th>Risk</th>
+
+<th>Threat Level</th>
+
+</tr>
+
+{% if earthquakes %}
+{% for eq in earthquakes %}
+<tr>
+<td><b>{{eq.place}}</b></td>
+<td>{{eq.mag}}</td>
+<td>{{eq.risk}}</td>
+<td>{{eq.threat_level}}</td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+<td colspan="4" style="text-align:center; padding:20px; color:#a7f3d0;">
+No seismic disturbances detected in India and neighboring sectors in the last 24 hours. Regional status is nominal (🟢 STABLE).
+</td>
+</tr>
+{% endif %}
+</table>
+
+</div>
+
+<div class="card">
+
+<h2>
+📊 Monitoring Coverage
+</h2>
+
+<p>
+India • Nepal • Pakistan • Bangladesh • China Border • Myanmar
+</p>
+
+</div>
+
+</body>
+</html>

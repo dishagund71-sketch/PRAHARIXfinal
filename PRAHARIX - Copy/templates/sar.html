@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRAHARIX - Sentinel-1 SAR Intelligence Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background:#0a0f1f; color:#e0e6ed; min-height:100vh; padding-bottom:40px; }
+        
+        .header {
+            background: linear-gradient(180deg, #10182d 0%, #0d1326 100%);
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 2px solid #00d4ff;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.15);
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff7b00, #ffd700, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+        .header p { color: #8fa0be; font-size: 13px; letter-spacing: 0.5px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+
+        .card {
+            background: rgba(19, 29, 54, 0.85);
+            backdrop-filter: blur(12px);
+            padding: 22px;
+            border-radius: 14px;
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .card:hover { border-color: rgba(0, 212, 255, 0.5); }
+
+        h2, h3 { color: #00d4ff; margin-bottom: 12px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-live { background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid #00ff88; }
+        .badge-threat { background: rgba(255, 123, 0, 0.15); color: #ff7b00; border: 1px solid #ff7b00; }
+
+        .metric-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+        .metric-label { color: #8fa0be; }
+        .metric-value { font-weight: 600; color: #fff; }
+
+        .score-hero {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .score-number {
+            font-size: 52px;
+            font-weight: 900;
+            color: #00d4ff;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            line-height: 1;
+        }
+
+        .products-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        .products-table th { background: #0c1426; color: #00d4ff; text-align: left; padding: 10px; }
+        .products-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .products-table tr:hover { background: rgba(0, 212, 255, 0.04); }
+
+        .btn-nav {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(90deg, rgba(0, 212, 255, 0.2), rgba(0, 150, 255, 0.3));
+            color: #00d4ff;
+            text-decoration: none;
+            border-radius: 25px;
+            border: 1px solid #00d4ff;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .btn-nav:hover { background: #00d4ff; color: #000; box-shadow: 0 0 15px #00d4ff; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🛰 PRAHARIX SAR Intelligence Center</h1>
+    <p>Copernicus Sentinel-1 Synthetic Aperture Radar (C-Band 5.405 GHz) Live Telemetry</p>
+</div>
+
+<div class="container">
+
+    <!-- TOP SUMMARY GRID -->
+    <div class="grid-3">
+        <!-- SYSTEM STATUS -->
+        <div class="card">
+            <h2>📡 Mission Link Status <span class="badge badge-live">● LIVE</span></h2>
+            <div class="metric-row"><span class="metric-label">SAR Constellation:</span><span class="metric-value">{{ sar_data.satellite }}</span></div>
+            <div class="metric-row"><span class="metric-label">Radar Payload:</span><span class="metric-value">{{ sar_data.radar_band }}</span></div>
+            <div class="metric-row"><span class="metric-label">Instrument Mode:</span><span class="metric-value">{{ sar_data.mode }}</span></div>
+            <div class="metric-row"><span class="metric-label">Polarization:</span><span class="metric-value">{{ sar_data.polarization }}</span></div>
+            <div class="metric-row"><span class="metric-label">Data Source:</span><span class="metric-value">{{ sar_data.source }}</span></div>
+            <div class="metric-row"><span class="metric-label">Status:</span><span class="metric-value" style="color:#00ff88;">✅ ONLINE (Stream Active)</span></div>
+        </div>
+
+        <!-- THREAT SCORE -->
+        <div class="card">
+            <h2>🧠 SAR Threat Assessment</h2>
+            <div class="score-hero">
+                <div class="score-number">{{ sar_data.risk_score }} <span style="font-size:22px; color:#8fa0be;">/ 100</span></div>
+                <p style="margin-top:10px;"><span class="badge badge-threat">Threat: {{ sar_data.threat_level }}</span></p>
+            </div>
+            <p style="font-size:12px; color:#b0c0d8; text-align:center; margin-top:8px;">
+                {{ sar_data.recommendation }}
+            </p>
+        </div>
+
+        <!-- RADAR METRICS -->
+        <div class="card">
+            <h2>📊 Radar Telemetry Analysis</h2>
+            <div class="metric-row"><span class="metric-label">VV Backscatter:</span><span class="metric-value" style="color:#ff7b00;">{{ sar_data.backscatter_vv }}</span></div>
+            <div class="metric-row"><span class="metric-label">VH Backscatter:</span><span class="metric-value" style="color:#00d4ff;">{{ sar_data.backscatter_vh }}</span></div>
+            <div class="metric-row"><span class="metric-label">Pol Ratio (VV/VH):</span><span class="metric-value">{{ sar_data.pol_ratio }}</span></div>
+            <div class="metric-row"><span class="metric-label">Flood Inundation Index:</span><span class="metric-value" style="color:#00ff88;">{{ sar_data.flood_index }}</span></div>
+            <div class="metric-row"><span class="metric-label">Interferometric Coherence:</span><span class="metric-value">{{ sar_data.ground_stability }}</span></div>
+            <div class="metric-row"><span class="metric-label">Latest Acquisition:</span><span class="metric-value">{{ sar_data.latest_acquisition }}</span></div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="grid-2">
+        <div class="card">
+            <h2>📈 Radar Backscatter Profile (Cross-Track dB)</h2>
+            <canvas id="sarChart" height="150"></canvas>
+        </div>
+        <div class="card">
+            <h2>🌊 Surface Water & Flood Risk Anomaly</h2>
+            <canvas id="floodChart" height="150"></canvas>
+        </div>
+    </div>
+
+    <!-- LIVE COPERNICUS SENTINEL-1 FEED TABLE -->
+    <div class="card">
+        <h2>🛰 Real-Time Sentinel-1 GRD Products Catalog <span class="badge badge-live">● {{ sar_data.products_count }} Live Swaths</span></h2>
+        <p style="font-size:11px; color:#8fa0be; margin-bottom:12px;">Direct OData streaming from Copernicus Data Space Ecosystem (ESA/EU)</p>
+        
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Product SAFE Name</th>
+                    <th>Platform</th>
+                    <th>Mode</th>
+                    <th>Polarization</th>
+                    <th>Acquisition Date</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sar_data.products %}
+                    {% for p in sar_data.products %}
+                    <tr>
+                        <td style="font-family:monospace; color:#00d4ff; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ p.name }}">{{ p.name }}</td>
+                        <td><b>{{ p.satellite }}</b></td>
+                        <td>{{ p.mode }}</td>
+                        <td>{{ p.polarization }}</td>
+                        <td>{{ p.acquisition_time }}</td>
+                        <td>{{ p.size_gb }} GB</td>
+                        <td><span style="color:#00ff88; font-weight:700;">● {{ p.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center; color:#8fa0be;">No live products currently cached. Live stream syncing...</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- AI FORECAST & RESPONSE ASSETS -->
+    <div class="grid-2">
+        <div class="card">
+            <h2>🤖 AI Predictive Forecast</h2>
+            <div class="metric-row"><span class="metric-label">Next 24 Hours Risk Level:</span><span class="metric-value" style="color:#00d4ff; font-size:16px;"><b>{{ forecast.next_24h }}%</b></span></div>
+            <div class="metric-row"><span class="metric-label">Trajectory Trend:</span><span class="metric-value"><b>{{ forecast.trend }}</b></span></div>
+            <div class="metric-row"><span class="metric-label">SAR Swath Revisit Window:</span><span class="metric-value">12 - 36 Hours</span></div>
+            <div class="metric-row"><span class="metric-label">AI Fusion Confidence:</span><span class="metric-value">94.8%</span></div>
+        </div>
+
+        <div class="card">
+            <h2>🛡 Operational Response Assets</h2>
+            {% for asset in response_assets %}
+            <div class="metric-row">
+                <span class="metric-label">{{ asset.name }}</span>
+                <span class="metric-value" style="color:{% if asset.status == 'ACTIVE' or asset.status == 'ONLINE' %}#00ff88{% elif asset.status == 'READY' %}#00d4ff{% else %}#ffd700{% endif %};">
+                    ● {{ asset.status }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:30px;">
+        <a href="/" class="btn-nav">⬅ Back To Mission Control Dashboard</a>
+    </div>
+
+</div>
+
+<script>
+// Backscatter Profile Chart
+new Chart(document.getElementById('sarChart'), {
+    type: 'line',
+    data: {
+        labels: ['-30km', '-20km', '-10km', 'Nadir/Center', '+10km', '+20km', '+30km'],
+        datasets: [
+            {
+                label: 'VV dB (Co-Pol)',
+                data: [-22, -18, -15, -22, -14, -16, -19],
+                borderColor: '#ff7b00',
+                backgroundColor: 'rgba(255, 123, 0, 0.12)',
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'VH dB (Cross-Pol)',
+                data: [-28, -25, -22, -28, -21, -23, -26],
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.12)',
+                fill: true,
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: '#8fa0be' } }
+        },
+        scales: {
+            x: { ticks: { color: '#8fa0be' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#8fa0be' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+    }
+});
+
+// Flood & Deformation Bar Chart
+new Chart(document.getElementById('floodChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Open Water', 'Flood Zone', 'Dry Soil', 'Urban Surface'],
+        datasets: [{
+            data: [42, 14, 28, 16],
+            backgroundColor: ['#00d4ff', '#ff7b00', '#00ff88', '#ffd700'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: { ticks: { color: '#8fa0be' }, grid: { display: false } },
+            y: { ticks: { color: '#8fa0be' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+    }
+});
+</script>
+
+</body>
+</html>

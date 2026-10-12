@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>PRAHARI-X Analytics Center</title>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+
+background:#0b1220;
+color:white;
+font-family:Arial;
+margin:0;
+padding:0;
+
+}
+
+.header{
+
+background:#111827;
+padding:20px;
+text-align:center;
+border-bottom:2px solid cyan;
+
+}
+
+.card{
+
+background:#1f2937;
+padding:20px;
+margin:15px;
+border-radius:10px;
+
+}
+
+.grid{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fit,minmax(250px,1fr));
+
+gap:15px;
+
+padding:15px;
+
+}
+
+.stat{
+
+background:#111827;
+
+padding:20px;
+
+border-radius:10px;
+
+text-align:center;
+
+}
+
+.stat h2{
+
+margin:0;
+
+color:cyan;
+
+font-size:32px;
+
+}
+
+table{
+
+width:100%;
+
+border-collapse:collapse;
+
+}
+
+th{
+
+background:#111827;
+
+padding:12px;
+
+}
+
+td{
+
+padding:12px;
+
+border-bottom:1px solid #374151;
+
+}
+
+a{
+
+color:cyan;
+
+text-decoration:none;
+
+}
+
+.high{
+
+color:#ef4444;
+font-weight:bold;
+
+}
+
+.medium{
+
+color:#facc15;
+font-weight:bold;
+
+}
+
+.low{
+
+color:#22c55e;
+font-weight:bold;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>
+📊 PRAHARI-X Analytics Center
+</h1>
+
+<p>
+AI Threat Intelligence Dashboard
+</p>
+
+</div>
+
+<div class="card">
+
+<a href="/">
+🏠 Back To Dashboard
+</a>
+
+</div>
+
+<div class="grid">
+
+<div class="stat">
+
+<h2>
+{{fusion_score}}
+</h2>
+
+<p>
+Fusion Score
+</p>
+
+</div>
+
+<div class="stat">
+
+<h2>
+{{fusion_confidence}}%
+</h2>
+
+<p>
+AI Confidence
+</p>
+
+</div>
+
+<div class="stat">
+
+<h2>
+{{stats.critical}}
+</h2>
+
+<p>
+Critical Events
+</p>
+
+</div>
+
+<div class="stat">
+
+<h2>
+{{stats.earthquakes}}
+</h2>
+
+<p>
+Total Incidents
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>
+🧠 AI Threat Assessment
+</h2>
+
+<p>
+
+Current Threat Level:
+
+<b>{{fusion_threat}}</b>
+
+</p>
+
+<p>
+
+System Confidence:
+
+<b>{{fusion_confidence}}%</b>
+
+</p>
+
+</div>
+
+<div class="card">
+
+<h2>
+🔥 Top Danger Zones
+</h2>
+
+<table>
+
+<tr>
+
+<th>Location</th>
+
+<th>Score</th>
+
+<th>Threat</th>
+
+</tr>
+
+{% for zone in danger_zones %}
+
+<tr>
+
+<td>{{zone.place}}</td>
+
+<td>{{zone.score}}</td>
+
+<td>{{zone.level}}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+<div class="card">
+
+<h2>
+🚀 PRAHARI-X Status
+</h2>
+
+<p>
+
+Analytics Engine:
+✅ Active
+
+</p>
+
+<p>
+
+Threat Intelligence:
+✅ Running
+
+</p>
+
+<p>
+
+Database Monitor:
+✅ Connected
+
+</p>
+
+<p>
+
+Fusion Engine:
+✅ Online
+
+</p>
+
+</div>
+
+</body>
+</html>

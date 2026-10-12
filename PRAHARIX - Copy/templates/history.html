@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>PRAHARI-X History</title>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+
+background:#0b1220;
+color:white;
+font-family:Arial;
+margin:0;
+padding:0;
+
+}
+
+.header{
+
+background:#111827;
+padding:20px;
+text-align:center;
+border-bottom:2px solid cyan;
+
+}
+
+.card{
+
+background:#1f2937;
+padding:20px;
+margin:15px;
+border-radius:10px;
+
+}
+
+table{
+
+width:100%;
+border-collapse:collapse;
+
+}
+
+th{
+
+background:#111827;
+padding:12px;
+
+}
+
+td{
+
+padding:12px;
+border-bottom:1px solid #374151;
+
+}
+
+a{
+
+color:cyan;
+text-decoration:none;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>
+📜 Incident History
+</h1>
+
+<p>
+Historical Threat Records
+</p>
+
+</div>
+
+<div class="card">
+
+<a href="/">
+🏠 Back To Dashboard
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>
+📊 Incident Database
+</h2>
+
+<table>
+
+<tr>
+
+<th>Location</th>
+
+<th>Magnitude</th>
+
+<th>Threat</th>
+
+<th>Score</th>
+
+<th>Date</th>
+
+</tr>
+
+{% for row in incidents %}
+
+<tr>
+
+<td>{{row[0]}}</td>
+
+<td>{{row[1]}}</td>
+
+<td>{{row[2]}}</td>
+
+<td>{{row[3]}}</td>
+
+<td>{{row[4]}}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</body>
+</html>

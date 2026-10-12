@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRAHARIX Alert Center</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+        body { background:#0a0f1f; color:#e0e6ed; min-height:100vh; padding-bottom:40px; }
+        .header { background:#10182d; padding:20px; text-align:center; border-bottom:2px solid cyan; }
+        .nav { background:#111827; padding:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; border-bottom:1px solid #222; }
+        .nav-links { display:flex; gap:15px; flex-wrap:wrap; align-items:center; }
+        .nav a { color:#00bfff; text-decoration:none; font-weight:600; font-size:13px; }
+        .container { max-width:1100px; margin:20px auto; padding:0 20px; }
+        .card { background:rgba(19, 29, 54, 0.85); backdrop-filter:blur(10px); padding:20px; border-radius:12px; border:1px solid rgba(0, 212, 255, 0.2); margin-bottom:20px; }
+        h1 { color:cyan; margin-bottom:6px; font-size:26px; }
+        h2 { font-size:18px; margin-bottom:12px; }
+        .alert-item { background:rgba(0,0,0,0.3); padding:12px 16px; border-radius:8px; margin-bottom:10px; border-left:4px solid #aaa; display:flex; justify-content:space-between; align-items:center; }
+        .alert-critical { border-left-color:#ff4444; }
+        .alert-high { border-left-color:#ff7b00; }
+        .alert-medium { border-left-color:#ffd700; }
+        .badge { display:inline-block; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .badge-red { background:rgba(255,68,68,0.2); color:#ff4444; border:1px solid #ff4444; }
+        .badge-orange { background:rgba(255,123,0,0.2); color:#ff7b00; border:1px solid #ff7b00; }
+        .badge-yellow { background:rgba(255,215,0,0.2); color:#ffd700; border:1px solid #ffd700; }
+        
+        .toggle-btn { padding:7px 15px; border:1px solid #00bfff; background:rgba(0,191,255,0.1); color:#00bfff; border-radius:20px; cursor:pointer; font-weight:700; font-size:12px; transition:all 0.2s ease; }
+        .toggle-btn:hover { background:rgba(0,191,255,0.2); }
+        @keyframes pulse-siren {
+            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(255, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+        .btn-siren-active {
+            animation: pulse-siren 1.2s infinite !important;
+            background: #ff3333 !important;
+            color: white !important;
+            border-color: #ff3333 !important;
+            box-shadow: 0 0 15px #ff3333 !important;
+        }
+        .btn-siren-armed {
+            background: rgba(0, 255, 136, 0.2) !important;
+            border-color: #00ff88 !important;
+            color: #00ff88 !important;
+        }
+    </style>
+</head>
+<body>
+
+<!-- AUDIO SIREN ELEMENT -->
+<audio id="sirenAudio" src="/static/siren.mp3.wav" loop preload="auto"></audio>
+
+<!-- FLOATING CRITICAL HAZARD ALERT BANNER -->
+<div id="criticalBanner" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; background:linear-gradient(90deg, #990000, #ff0000); border:2px solid #fff; border-radius:30px; padding:12px 24px; box-shadow:0 0 35px rgba(255,0,0,0.9); align-items:center; gap:16px;">
+    <span style="font-size:24px; animation:pulse-siren 1s infinite;">🚨</span>
+    <div>
+        <b style="font-size:14px; color:#fff; letter-spacing:0.5px;">CRITICAL HAZARD SIREN ACTIVE!</b>
+        <span style="font-size:12px; color:#ffd0d0; display:block;">
+            Critical priority alert sounding across tactical channels.
+        </span>
+    </div>
+    <button onclick="stopSirenAudio()" style="background:#fff; color:#cc0000; font-weight:800; border:none; border-radius:20px; padding:7px 16px; cursor:pointer; font-size:12px;">
+        SILENCE SIREN
+    </button>
+</div>
+
+<div class="header">
+    <h1>🚨 PRAHARIX Tactical Alert Center</h1>
+    <p style="color:#8fa0be; font-size:13px;">Real-Time Priority Hazard Broadcast & Siren Alarm System</p>
+</div>
+
+<div class="nav">
+    <div class="nav-links">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/alerts">🚨 Alert Center</a>
+        <a href="/india">🇮🇳 India Monitor</a>
+        <a href="/sar">🛰 SAR Intelligence</a>
+        <a href="/analytics">📊 Analytics</a>
+        <a href="/history">📜 History</a>
+        <a href="/report">📄 Report</a>
+    </div>
+    <!-- SIREN TOGGLE BUTTONS -->
+    <div style="display:flex; align-items:center; gap:8px;">
+        <button id="btn-siren-toggle" onclick="toggleSirenArmed()" class="toggle-btn" style="display:flex; align-items:center; gap:6px;">
+            <span id="siren-icon">🔇</span>
+            <span id="siren-status-text">SIREN: MUTED</span>
+        </button>
+        <button id="btn-siren-test" onclick="toggleManualSirenTest()" class="toggle-btn" style="border-color:#ff7b00; color:#ff7b00;">
+            🚨 TEST AUDIO
+        </button>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h2 style="color:#ff4444;">🔴 Critical Threat Alerts ({% if critical_alerts %}{{ critical_alerts|length }}{% else %}0{% endif %})</h2>
+        {% if critical_alerts %}
+            {% for alert in critical_alerts %}
+            <div class="alert-item alert-critical">
+                <div>
+                    <b style="font-size:15px; color:#fff;">{{ alert.place }}</b>
+                    <p style="font-size:12px; color:#aaa; margin-top:4px;">Magnitude: {{ alert.mag }} | Depth: {{ alert.depth }} km | Time: {{ alert.time }}</p>
+                </div>
+                <span class="badge badge-red">CRITICAL {{ alert.threat_score }}/100</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#8fa0be; font-size:13px;">No active critical alerts at this time.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="color:#ff7b00;">🟠 High Priority Alerts ({% if high_alerts %}{{ high_alerts|length }}{% else %}0{% endif %})</h2>
+        {% if high_alerts %}
+            {% for alert in high_alerts %}
+            <div class="alert-item alert-high">
+                <div>
+                    <b style="font-size:15px; color:#fff;">{{ alert.place }}</b>
+                    <p style="font-size:12px; color:#aaa; margin-top:4px;">Magnitude: {{ alert.mag }} | Depth: {{ alert.depth }} km | Time: {{ alert.time }}</p>
+                </div>
+                <span class="badge badge-orange">HIGH {{ alert.threat_score }}/100</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#8fa0be; font-size:13px;">No high-level alerts currently active.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="color:#ffd700;">🟡 Moderate & Advisory Events ({% if medium_alerts %}{{ medium_alerts|length }}{% else %}0{% endif %})</h2>
+        {% if medium_alerts %}
+            {% for alert in medium_alerts[:15] %}
+            <div class="alert-item alert-medium">
+                <div>
+                    <b style="font-size:14px; color:#fff;">{{ alert.place }}</b>
+                    <p style="font-size:12px; color:#aaa; margin-top:4px;">Magnitude: {{ alert.mag }} | Depth: {{ alert.depth }} km | Time: {{ alert.time }}</p>
+                </div>
+                <span class="badge badge-yellow">ADVISORY {{ alert.threat_score }}/100</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#8fa0be; font-size:13px;">No moderate events logged.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+const sirenAudio = document.getElementById('sirenAudio');
+const btnSirenToggle = document.getElementById('btn-siren-toggle');
+const btnSirenTest = document.getElementById('btn-siren-test');
+const sirenIcon = document.getElementById('siren-icon');
+const sirenStatusText = document.getElementById('siren-status-text');
+const criticalBanner = document.getElementById('criticalBanner');
+
+let isSirenArmed = localStorage.getItem('praharix_siren_armed') === 'true';
+let isSirenPlaying = false;
+const hasCriticalAlerts = {% if critical_alerts and critical_alerts|length > 0 %}true{% else %}false{% endif %};
+
+function updateSirenUI() {
+    if (isSirenPlaying) {
+        btnSirenToggle.className = 'toggle-btn btn-siren-active';
+        sirenIcon.textContent = '🚨';
+        sirenStatusText.textContent = 'SIREN ACTIVE';
+        btnSirenTest.textContent = '⏹ STOP SIREN';
+        btnSirenTest.style.borderColor = '#ff4444';
+        btnSirenTest.style.color = '#ff4444';
+        criticalBanner.style.display = 'flex';
+    } else if (isSirenArmed) {
+        btnSirenToggle.className = 'toggle-btn btn-siren-armed';
+        sirenIcon.textContent = '🔊';
+        sirenStatusText.textContent = 'SIREN ARMED';
+        btnSirenTest.textContent = '🚨 TEST AUDIO';
+        btnSirenTest.style.borderColor = '#ff7b00';
+        btnSirenTest.style.color = '#ff7b00';
+        criticalBanner.style.display = 'none';
+    } else {
+        btnSirenToggle.className = 'toggle-btn';
+        sirenIcon.textContent = '🔇';
+        sirenStatusText.textContent = 'SIREN MUTED';
+        btnSirenTest.textContent = '🚨 TEST AUDIO';
+        btnSirenTest.style.borderColor = '#ff7b00';
+        btnSirenTest.style.color = '#ff7b00';
+        criticalBanner.style.display = 'none';
+    }
+}
+
+function playSirenAudio() {
+    sirenAudio.play().then(() => {
+        isSirenPlaying = true;
+        updateSirenUI();
+    }).catch(err => {
+        console.warn("Audio autoplay blocked by browser policy; user interaction required:", err);
+    });
+}
+
+function stopSirenAudio() {
+    sirenAudio.pause();
+    sirenAudio.currentTime = 0;
+    isSirenPlaying = false;
+    updateSirenUI();
+}
+
+function toggleSirenArmed() {
+    isSirenArmed = !isSirenArmed;
+    localStorage.setItem('praharix_siren_armed', isSirenArmed);
+    if (isSirenArmed) {
+        if (hasCriticalAlerts) {
+            playSirenAudio();
+        } else {
+            sirenAudio.play().then(() => {
+                sirenAudio.pause();
+                sirenAudio.currentTime = 0;
+            }).catch(() => {});
+            updateSirenUI();
+        }
+    } else {
+        stopSirenAudio();
+    }
+}
+
+function toggleManualSirenTest() {
+    if (isSirenPlaying) {
+        stopSirenAudio();
+    } else {
+        playSirenAudio();
+    }
+}
+
+updateSirenUI();
+if (isSirenArmed && hasCriticalAlerts) {
+    playSirenAudio();
+}
+</script>
+
+</body>
+</html>

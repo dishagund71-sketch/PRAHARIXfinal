@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>PRAHARI-X Intelligence Report</title>
+
+<style>
+
+body{
+
+background:#0b1220;
+color:white;
+font-family:Arial;
+padding:30px;
+
+}
+
+.card{
+
+background:#1f2937;
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+
+}
+
+h1{
+
+color:cyan;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>
+📄 PRAHARI-X Intelligence Report
+</h1>
+
+<div class="card">
+
+<p>
+Generated:
+<b>{{generated}}</b>
+</p>
+
+<p>
+Total Earthquakes:
+<b>{{earthquakes}}</b>
+</p>
+
+<p>
+NASA Events:
+<b>{{disasters}}</b>
+</p>
+
+<p>
+Critical Threats:
+<b>{{critical}}</b>
+</p>
+
+</div>
+
+<div class="card">
+
+<h2>
+🔥 Highest Threat Zone
+</h2>
+
+{% if highest %}
+
+<p>
+Location:
+<b>{{highest.place}}</b>
+</p>
+
+<p>
+Magnitude:
+<b>{{highest.mag}}</b>
+</p>
+
+<p>
+Threat:
+<b>{{highest.threat_level}}</b>
+</p>
+
+<p>
+Score:
+<b>{{highest.threat_score}}</b>
+</p>
+
+{% endif %}
+
+</div>
+
+<div class="card">
+
+<h2>
+🤖 AI Assessment
+</h2>
+
+<p>
+
+Current global monitoring indicates
+active seismic events are being
+tracked by PRAHARI-X.
+
+</p>
+
+<p>
+
+Recommended Action:
+
+Increase monitoring in
+high-risk regions.
+
+</p>
+
+</div>
+<div class="card">
+
+<h2>
+🎯 Executive Summary
+</h2>
+
+<p>
+
+PRAHARI-X has analyzed
+live global seismic and
+disaster intelligence feeds.
+
+</p>
+
+<p>
+
+Current Threat Posture:
+
+<b>
+{{critical}} Critical Events
+</b>
+
+</p>
+
+<p>
+
+Operational Status:
+
+<b>
+ACTIVE MONITORING
+</b>
+
+</p>
+
+<p>
+
+Recommendation:
+
+Continue surveillance of
+high-risk seismic regions.
+
+</p>
+
+</div>
+<div class="card">
+
+<h2>
+📊 Risk Classification
+</h2>
+
+<p>
+0 - 20 :
+LOW
+</p>
+
+<p>
+21 - 50 :
+MEDIUM
+</p>
+
+<p>
+51 - 80 :
+HIGH
+</p>
+
+<p>
+81 - 100 :
+CRITICAL
+</p>
+
+</div>
+<br><br>
+
+<a href="/download_pdf">
+📄 Download PDF Report
+</a>
+
+<br><br>
+
+<a href="/">
+⬅ Back To Dashboard
+</a>
+
+</body>
+
+</html>

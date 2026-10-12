@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PRAHARIX 2.0 - National Multi-Hazard Command Center</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/globe.gl"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+body{background:#050816;color:white;overflow-x:hidden;position:relative;min-height:100vh;}
+#bg-canvas{position:fixed; top:0; left:0; width:100%; height:100%; z-index:-5; background:radial-gradient(ellipse at center, #0a1430 0%, #02040a 100%);}
+.header{text-align:center;padding:35px 20px; position:relative; z-index:2;}
+.header h1{font-size:48px;font-weight:800;background:linear-gradient(90deg,#ff7b00,#ffd700,#00bfff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.navbar{display:flex;justify-content:space-between;align-items:center;padding:18px 25px;background:rgba(12,18,30,.85);backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,.1); position:relative; z-index:2;}
+.card{background:rgba(12,18,30,.78);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px;margin:15px; position:relative; z-index:2;}
+.badge{display:inline-block;padding:5px 12px;margin:4px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:700;}
+table{width:100%;border-collapse:collapse;}th{background:#111827;padding:12px;color:#00bfff;text-align:left;}td{padding:12px;border-bottom:1px solid rgba(255,255,255,.06);}
+#map{height:550px;width:100%;border-radius:18px;border:1px solid rgba(255,255,255,.1);}
+#map-3d{height:600px;width:100%;border-radius:18px;border:2px solid #00bfff;display:none;background:black;}
+.view-toggle{display:flex;justify-content:center;gap:10px;margin:15px 0;}
+.toggle-btn{padding:10px 20px;border:1px solid #00bfff;background:rgba(0,191,255,0.1);color:#00bfff;border-radius:25px;cursor:pointer;font-weight:700;transition:all 0.2s ease;}
+.toggle-btn.active{background:#00bfff;color:black;box-shadow:0 0 15px #00bfff;}
+a{color:#00bfff;text-decoration:none;}
+.metric-pill{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;margin-top:8px;}
+@keyframes pulse-siren {
+    0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(255, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+}
+.btn-siren-active {
+    animation: pulse-siren 1.2s infinite !important;
+    background: #ff3333 !important;
+    color: white !important;
+    border-color: #ff3333 !important;
+    box-shadow: 0 0 15px #ff3333 !important;
+}
+.btn-siren-armed {
+    background: rgba(0, 255, 136, 0.2) !important;
+    border-color: #00ff88 !important;
+    color: #00ff88 !important;
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="header">
+    <h1>PRAHARIX 2.0</h1>
+    <h2 style="color:white;">AI-Powered National Multi-Hazard Intelligence Command Center</h2>
+    <p style="color:#b8c5d6;margin-top:10px;">Real-Time Monitoring • 3D GLOBE EDITION</p>
+    <div style="margin-top:15px;">
+        <span class="badge" style="border-color:#00ff88;color:#00ff88;">USGS LIVE 24H</span>
+        <span class="badge" style="border-color:#00bfff;color:#00bfff;">SENTINEL-1 SAR</span>
+        <span class="badge" style="border-color:#ffd700;color:#ffd700;">WEATHER METEO</span>
+        <span class="badge">NASA EONET</span>
+        <span class="badge">AI FUSION</span>
+        <span class="badge" style="border-color:#00bfff;color:#00bfff;">🌍 3D GLOBE</span>
+    </div>
+<!-- AUDIO SIREN ELEMENT -->
+<audio id="sirenAudio" src="/static/siren.mp3.wav" loop preload="auto"></audio>
+
+<!-- FLOATING CRITICAL HAZARD ALERT BANNER -->
+<div id="criticalBanner" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; background:linear-gradient(90deg, #990000, #ff0000); border:2px solid #fff; border-radius:30px; padding:12px 24px; box-shadow:0 0 35px rgba(255,0,0,0.9); align-items:center; gap:16px;">
+    <span style="font-size:24px; animation:pulse-siren 1s infinite;">🚨</span>
+    <div>
+        <b style="font-size:14px; color:#fff; letter-spacing:0.5px;">CRITICAL HAZARD DETECTED!</b>
+        <span id="criticalBannerText" style="font-size:12px; color:#ffd0d0; display:block;">
+            {% if latest_alert %}{{ latest_alert.place }} - Mag {{ latest_alert.magnitude }}{% else %}Critical hazard alert triggered in monitored zone{% endif %}
+        </span>
+    </div>
+    <button onclick="stopSirenAudio()" style="background:#fff; color:#cc0000; font-weight:800; border:none; border-radius:20px; padding:7px 16px; cursor:pointer; font-size:12px; transition:0.2s;">
+        SILENCE SIREN
+    </button>
+</div>
+
+<div class="navbar">
+    <h1>🛰 PRAHARIX COMMAND CENTER</h1>
+    <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+        <!-- INTERACTIVE SIREN CONTROLLER -->
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button id="btn-siren-toggle" onclick="toggleSirenArmed()" class="toggle-btn" style="padding:7px 15px; font-size:12px; display:flex; align-items:center; gap:6px;">
+                <span id="siren-icon">🔇</span>
+                <span id="siren-status-text">SIREN: MUTED</span>
+            </button>
+            <button id="btn-siren-test" onclick="toggleManualSirenTest()" class="toggle-btn" style="padding:7px 12px; font-size:12px; border-color:#ff7b00; color:#ff7b00;">
+                🚨 TEST AUDIO
+            </button>
+        </div>
+        <div class="status"><span>🟢 LIVE TELEMETRY ACTIVE</span> <span id="clock" style="margin-left:10px;color:#00bfff;"></span></div>
+    </div>
+</div>
+
+<!-- 4 TOP LEVEL LIVE CARDS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px;padding:20px;">
+    <!-- WEATHER LIVE -->
+    <div class="card" style="border-top:3px solid #ffd700;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>🌦 Weather</h2>
+            <span class="badge" style="border-color:#00ff88;color:#00ff88;">● LIVE</span>
+        </div>
+        <p style="font-size:22px;font-weight:800;color:#ffd700;margin:8px 0;">{{weather.temp}} °C <span style="font-size:14px;color:#bbb;">({{weather.condition}})</span></p>
+        <p style="font-size:12px;color:#aaa;">Feels Like: <b>{{weather.feels_like}} °C</b> | Humidity: <b>{{weather.humidity}}%</b></p>
+        <p style="font-size:12px;color:#aaa;">Wind: <b>{{weather.wind}} km/h ({{weather.wind_dir}})</b> | Rain: <b>{{weather.precipitation}} mm</b></p>
+        <p style="font-size:11px;color:#00bfff;margin-top:6px;">📍 {{weather.location}}</p>
+    </div>
+
+    <!-- SAR LIVE -->
+    <div class="card" style="border-top:3px solid #ff7b00;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>🛰 Sentinel-1 SAR</h2>
+            <span class="badge" style="border-color:#ff7b00;color:#ff7b00;">● {{sar_data.status}}</span>
+        </div>
+        <p style="font-size:22px;font-weight:800;color:#ff7b00;margin:8px 0;">{{sar_data.risk_score}} <span style="font-size:14px;color:#bbb;">/ 100 Risk ({{sar_data.threat_level}})</span></p>
+        <p style="font-size:12px;color:#aaa;">Platform: <b>{{sar_data.satellite}}</b> ({{sar_data.radar_band}})</p>
+        <p style="font-size:12px;color:#aaa;">Polarization: <b>{{sar_data.polarization}}</b> | Backscatter: <b>{{sar_data.backscatter_vv}}</b></p>
+        <p style="font-size:11px;color:#00ff88;margin-top:6px;">🌊 Flood Index: {{sar_data.flood_index}}</p>
+    </div>
+
+    <!-- USGS LIVE -->
+    <div class="card" style="border-top:3px solid #00ff88;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>🌐 USGS Seismic</h2>
+            <span class="badge" style="border-color:#00ff88;color:#00ff88;">● {{stats.earthquakes}} LIVE</span>
+        </div>
+        <p style="font-size:22px;font-weight:800;color:#00ff88;margin:8px 0;">{{stats.earthquakes}} <span style="font-size:14px;color:#bbb;">Quakes (24h)</span></p>
+        <p style="font-size:12px;color:#aaa;">Critical Events: <b style="color:{% if stats.critical > 0 %}#ff4444{% else %}#00ff88{% endif %};">{{stats.critical}}</b> | Alerts: <b>{{stats.alerts}}</b></p>
+        <p style="font-size:12px;color:#aaa;">Peak Threat Score: <b>{{stats.score}}</b> ({{stats.threat}})</p>
+        <p style="font-size:11px;color:#ffd700;margin-top:6px;">🚀 USGS Global Geospatial Feed</p>
+    </div>
+
+    <!-- NATIONAL THREAT STATUS -->
+    <div class="card" style="border-top:3px solid #00bfff;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>🛡 National Status</h2>
+            <span class="badge" style="border-color:#00bfff;color:#00bfff;">AI FUSION</span>
+        </div>
+        <p style="font-size:22px;font-weight:800;color:{% if stats.threat == 'CRITICAL' %}#ff4444{% elif stats.threat == 'HIGH' %}#ff7b00{% else %}#00bfff{% endif %};margin:8px 0;">
+            {{stats.threat}} <span style="font-size:14px;color:#bbb;">({{global_risk_score}} / 100)</span>
+        </p>
+        <p style="font-size:12px;color:#aaa;">FTI Composite Score: <b>{{fti_score}}%</b></p>
+        <p style="font-size:12px;color:#aaa;">AI Recommendation Engine: <b>{{prediction.prediction}} ({{prediction.confidence}}%)</b></p>
+        <p style="font-size:11px;color:#8fa0be;margin-top:6px;">🕒 Synced: {{current_time}}</p>
+    </div>
+</div>
+
+<div class="card">
+<h2 style="color:#ff4444;">🔥 TOP 10 GLOBAL HIGH RISK ZONES (USGS LIVE)</h2>
+<div class="card" style="margin:10px 0; background:rgba(25,10,15,0.6); border-color:#ff4444;">
+    <h2>🚨 Authority Recommendation Engine</h2>
+    {% if latest_alert %}
+        <p>Threat Location: <b>{{ latest_alert.place }}</b> (Magnitude: {{ latest_alert.magnitude }})</p>
+        <p style="font-size:12px;color:#aaa;margin-top:4px;">Disaster Response Protocols Dispatched To:</p>
+        <ul style="margin-left:20px; font-size:12px; color:#ffb3b3;">
+            <li>State & Regional Disaster Management Authority (SDMA / NDMA)</li>
+            <li>Police Central Emergency Response HQ</li>
+            <li>Emergency Medical & Tactical Rescue Squads</li>
+        </ul>
+    {% else %}
+        <p style="color:#00ff88;">All monitored sectors operating at nominal risk levels.</p>
+    {% endif %}
+</div>
+<table>
+    <tr><th>Place</th><th>Magnitude</th><th>Threat Level</th><th>Score</th></tr>
+    {% for zone in danger_zones %}
+    <tr>
+        <td><b>{{zone.place}}</b></td>
+        <td>{{zone.mag}}</td>
+        <td><span class="badge" style="{% if zone.level == 'CRITICAL' %}border-color:#ff4444;color:#ff4444;{% elif zone.level == 'HIGH' %}border-color:#ff7b00;color:#ff7b00;{% else %}border-color:#00ff88;color:#00ff88;{% endif %}">{{zone.level}}</span></td>
+        <td>{{zone.score}}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+
+<div class="card">
+    <h3>🛰 Satellite & AI Intelligence Assessment</h3>
+    <pre style="background:#090d16; padding:12px; border-radius:8px; border-left:3px solid #00bfff; font-family:monospace; margin-top:8px;">{{ recommendation }}</pre>
+</div>
+
+<!-- SAR INTELLIGENCE MODULE - REAL COPERNICUS -->
+<div class="card" style="border:1px solid #ff7b00; margin:16px; border-radius:12px; background:rgba(15,15,15,0.9); padding:16px;">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="color:#ff7b00; font-size:16px;">🛰 SAR Intelligence Module - Sentinel-1 Live</h3>
+    <a href="/sar" class="badge" style="border-color:#ff7b00; color:#ff7b00; text-decoration:none;">Open Full SAR Center ➔</a>
+</div>
+<p style="font-size:11px; color:#aaa; margin-top:6px;">Platform: {{sar_data.satellite}} | C-Band 5.405GHz | Mode: {{sar_data.mode}} | {{sar_data.polarization}} | Source: {{sar_data.source}}</p>
+<div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:12px; margin-top:12px;">
+<pre id="sar-live" style="background:#000; padding:10px; border-radius:8px; font-size:10px; max-height:180px; overflow:auto; border-left:3px solid #ff7b00; color:#0f0;">{% if sar_data.products %}{% for p in sar_data.products %}• {{p.name}}
+  Platform: {{p.satellite}} | Size: {{p.size_gb}} GB | Date: {{p.acquisition_time}} | {{p.polarization}}
+{% endfor %}{% else %}Fetching Live Sentinel-1 GRD Products from Copernicus Data Space...{% endif %}</pre>
+<div style="background:#000; border-radius:8px; padding:8px; border:1px solid #222;">
+<p style="font-size:9px; color:#ff7b00;">BACKSCATTER ANALYSIS dB</p>
+<canvas id="sarCanvas" height="150"></canvas>
+<p id="sar-count" style="font-size:10px; color:#00ff88; text-align:center; margin-top:6px;">● {{sar_data.products_count}} LIVE SWATHS CONNECTED</p>
+</div>
+</div>
+</div>
+
+<!-- GRAPHS SECTION - 4 GRAPHS -->
+<div class="card" style="border:1px solid #00bfff; margin:16px; border-radius:12px; background:rgba(15,15,15,0.9); padding:16px;">
+<h3 style="color:#00bfff; font-size:14px;">📊 Intelligence Graphs - SAR + Threat Analysis</h3>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px;">
+<div style="background:#000; border-radius:8px; padding:10px; border:1px solid #222;"><p style="font-size:9px; color:#ff7b00;">FLOOD PROBABILITY %</p><canvas id="floodCanvas" height="140"></canvas></div>
+<div style="background:#000; border-radius:8px; padding:10px; border:1px solid #222;"><p style="font-size:9px; color:#00ff88;">THREAT TREND - 7 DAYS</p><canvas id="threatCanvas" height="140"></canvas></div>
+<div style="background:#000; border-radius:8px; padding:10px; border:1px solid #222;"><p style="font-size:9px; color:#ffd700;">POLARIZATION VV/VH RATIO</p><canvas id="polCanvas" height="140"></canvas></div>
+<div style="background:#000; border-radius:8px; padding:10px; border:1px solid #222;"><p style="font-size:9px; color:#aaa;">RISK SCORE DISTRIBUTION</p><canvas id="riskCanvas" height="140"></canvas></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🌍 Global Threat Map - Dual Mode (USGS Live Feed)</h2>
+<div class="view-toggle">
+  <button id="btn2d" class="toggle-btn active" onclick="show2D()">🗺️ 2D Interactive Map</button>
+  <button id="btn3d" class="toggle-btn" onclick="show3D()">🌍 3D Globe View - NEW</button>
+</div>
+<div id="map"></div>
+<div id="map-3d"></div>
+</div>
+
+<div class="card">
+<h2>🧭 Navigation Center</h2>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:10px;">
+<a href="/" class="toggle-btn">🏠 Dashboard</a>
+<a href="/history" class="toggle-btn">📜 Incident History</a>
+<a href="/trend" class="toggle-btn">📈 Trend Analysis</a>
+<a href="/india" class="toggle-btn">🇮🇳 India Monitor</a>
+<a href="/analytics" class="toggle-btn">📊 Analytics Center</a>
+<a href="/report" class="toggle-btn">📄 Intelligence Report</a>
+<a href="/sar" class="toggle-btn">🛰 SAR Intelligence</a>
+<a href="/alerts" class="toggle-btn">🚨 Alert Center</a>
+<a href="/logout" class="toggle-btn" style="border-color:#ff4444; color:#ff4444;">🚪 Logout</a>
+</div>
+</div>
+
+<script>
+function updateClock(){document.getElementById("clock").innerHTML=new Date().toLocaleString();}setInterval(updateClock,1000);updateClock();
+
+// Parse earthquakes safely from server-side JSON serialization
+const earthquakesData = {{ earthquakes | tojson }};
+
+const map2d = L.map('map').setView([20, 0], 2);
+const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map2d);
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+L.control.layers({"Street":street,"Satellite":satellite}).addTo(map2d);
+
+earthquakesData.forEach(eq => {
+    const col = eq.threat_level === 'CRITICAL' ? '#ff3333' : (eq.threat_level === 'HIGH' ? '#ff8800' : '#00ff88');
+    const radius = Math.max(eq.threat_score * 3500, 18000);
+    L.circle([eq.lat, eq.lon], {
+        radius: radius,
+        color: col,
+        fillColor: col,
+        fillOpacity: 0.45,
+        weight: 1.5
+    }).addTo(map2d).bindPopup(`
+        <div style="font-family:'Segoe UI',sans-serif; min-width:180px;">
+            <b style="color:#000;">${eq.place}</b><br>
+            <b>Magnitude:</b> ${eq.mag}<br>
+            <b>Depth:</b> ${eq.depth} km<br>
+            <b>Threat:</b> <span style="font-weight:700; color:${col};">${eq.threat_level}</span><br>
+            <b>Time:</b> <small>${eq.time}</small>
+        </div>
+    `);
+});
+
+let myGlobe;
+function init3D(){
+    if(myGlobe) return;
+    myGlobe = Globe()(document.getElementById('map-3d'))
+        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+        .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+        .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+        .pointsData(earthquakesData.map(eq => ({
+            lat: eq.lat,
+            lng: eq.lon,
+            size: Math.max(eq.mag * 0.75, 1.2),
+            color: eq.threat_level === 'CRITICAL' ? '#ff3333' : (eq.threat_level === 'HIGH' ? '#ff8800' : '#00ff88'),
+            label: `${eq.place} | Mag: ${eq.mag} | Depth: ${eq.depth}km | ${eq.threat_level}`
+        })))
+        .pointAltitude(d => d.size * 0.08)
+        .pointColor('color')
+        .pointRadius('size')
+        .pointLabel('label');
+    myGlobe.controls().autoRotate = true;
+    myGlobe.controls().autoRotateSpeed = 0.5;
+}
+
+function show3D(){
+    document.getElementById('map').style.display='none';
+    document.getElementById('map-3d').style.display='block';
+    document.getElementById('btn3d').classList.add('active');
+    document.getElementById('btn2d').classList.remove('active');
+    init3D();
+}
+
+function show2D(){
+    document.getElementById('map-3d').style.display='none';
+    document.getElementById('map').style.display='block';
+    document.getElementById('btn2d').classList.add('active');
+    document.getElementById('btn3d').classList.remove('active');
+    setTimeout(()=>{ map2d.invalidateSize(); }, 200);
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+const canvas = document.getElementById('bg-canvas');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+const geometry = new THREE.SphereGeometry(15, 32, 32);
+const material = new THREE.MeshBasicMaterial({color:0x00bfff, wireframe:true, transparent:true, opacity:0.15});
+const sphere = new THREE.Mesh(geometry, material);
+scene.add(sphere);
+const starsGeo = new THREE.BufferGeometry();
+const starsCount = 2000;
+const posArray = new Float32Array(starsCount*3);
+for(let i=0;i<starsCount*3;i++){posArray[i]=(Math.random()-0.5)*100;}
+starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray,3));
+const starsMat = new THREE.PointsMaterial({size:0.2, color:0xffffff, transparent:true, opacity:0.8});
+const stars = new THREE.Points(starsGeo, starsMat);
+scene.add(stars);
+camera.position.z = 30;
+function animate(){
+ requestAnimationFrame(animate);
+ sphere.rotation.y += 0.0015;
+ sphere.rotation.x += 0.0005;
+ stars.rotation.y += 0.0003;
+ renderer.render(scene, camera);
+}
+animate();
+window.addEventListener('resize', ()=>{
+    camera.aspect=window.innerWidth/window.innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+<script>
+// SAR LIVE REFRESH FROM API
+fetch("/api/sar")
+.then(r => r.json())
+.then(j => {
+    if (j.products && j.products.length > 0) {
+        let txt = j.products.map(v => `• ${v.name}\n  Platform: ${v.satellite} | Size: ${v.size_gb} GB | Date: ${v.acquisition_time} | ${v.polarization}\n`).join('\n');
+        document.getElementById('sar-live').textContent = txt;
+        document.getElementById('sar-count').innerHTML = `● ${j.products.length} Live Products Connected<br>Latest: ${j.latest_acquisition}`;
+    }
+})
+.catch(() => {
+    console.log("SAR live feed initialized with server-side telemetry.");
+});
+
+// 4 PROFESSIONAL GRAPHS
+new Chart(document.getElementById('sarCanvas'),{
+    type:'line',
+    data:{
+        labels:['-30km','-20km','-10km','Center','+10km','+20km','+30km'],
+        datasets:[
+            {label:'VV dB',data:[-22,-18,-15,-22,-14,-16,-19],borderColor:'#ff7b00',backgroundColor:'rgba(255,123,0,0.1)',fill:true,tension:0.4},
+            {label:'VH dB',data:[-28,-25,-22,-28,-21,-23,-26],borderColor:'#00bfff',backgroundColor:'rgba(0,191,255,0.1)',fill:true,tension:0.4}
+        ]
+    },
+    options:{plugins:{legend:{labels:{color:'#aaa',font:{size:9}}}}}
+});
+
+new Chart(document.getElementById('floodCanvas'),{
+    type:'bar',
+    data:{labels:['Water','Flood','Land','Urban'],datasets:[{data:[42,14,28,16],backgroundColor:['#00bfff','#ff7b00','#00ff88','#ffd700']}]},
+    options:{plugins:{legend:{display:false}}}
+});
+
+new Chart(document.getElementById('threatCanvas'),{
+    type:'line',
+    data:{labels:['Day1','Day2','Day3','Day4','Day5','Day6','Day7'],datasets:[{data:[32,45,38,60,55,70,68],borderColor:'#00ff88',backgroundColor:'rgba(0,255,136,0.15)',fill:true,tension:0.4}]},
+    options:{plugins:{legend:{display:false}}}
+});
+
+new Chart(document.getElementById('polCanvas'),{
+    type:'doughnut',
+    data:{labels:['VV Co-Pol','VH Cross-Pol'],datasets:[{data:[62,38],backgroundColor:['#ff7b00','#00bfff'],borderWidth:0}]},
+    options:{plugins:{legend:{labels:{color:'#aaa',font:{size:9}}}}}
+});
+
+new Chart(document.getElementById('riskCanvas'),{
+    type:'bar',
+    data:{labels:['LOW','MEDIUM','HIGH','CRITICAL'],datasets:[{data:[45,30,15,10],backgroundColor:['#00ff88','#ffd700','#ff7b00','#ff0000']}]},
+    options:{plugins:{legend:{display:false}}}
+});
+
+// ==========================================
+// TACTICAL SIREN AUDIO CONTROLLER
+// ==========================================
+const sirenAudio = document.getElementById('sirenAudio');
+const btnSirenToggle = document.getElementById('btn-siren-toggle');
+const btnSirenTest = document.getElementById('btn-siren-test');
+const sirenIcon = document.getElementById('siren-icon');
+const sirenStatusText = document.getElementById('siren-status-text');
+const criticalBanner = document.getElementById('criticalBanner');
+
+let isSirenArmed = localStorage.getItem('praharix_siren_armed') === 'true';
+let isSirenPlaying = false;
+const criticalThreatCount = {{ stats.critical }};
+
+function updateSirenUI() {
+    if (isSirenPlaying) {
+        btnSirenToggle.className = 'toggle-btn btn-siren-active';
+        sirenIcon.textContent = '🚨';
+        sirenStatusText.textContent = 'SIREN ACTIVE';
+        btnSirenTest.textContent = '⏹ STOP SIREN';
+        btnSirenTest.style.borderColor = '#ff4444';
+        btnSirenTest.style.color = '#ff4444';
+        criticalBanner.style.display = 'flex';
+    } else if (isSirenArmed) {
+        btnSirenToggle.className = 'toggle-btn btn-siren-armed';
+        sirenIcon.textContent = '🔊';
+        sirenStatusText.textContent = 'SIREN ARMED';
+        btnSirenTest.textContent = '🚨 TEST AUDIO';
+        btnSirenTest.style.borderColor = '#ff7b00';
+        btnSirenTest.style.color = '#ff7b00';
+        criticalBanner.style.display = 'none';
+    } else {
+        btnSirenToggle.className = 'toggle-btn';
+        sirenIcon.textContent = '🔇';
+        sirenStatusText.textContent = 'SIREN MUTED';
+        btnSirenTest.textContent = '🚨 TEST AUDIO';
+        btnSirenTest.style.borderColor = '#ff7b00';
+        btnSirenTest.style.color = '#ff7b00';
+        criticalBanner.style.display = 'none';
+    }
+}
+
+function playSirenAudio() {
+    sirenAudio.play().then(() => {
+        isSirenPlaying = true;
+        updateSirenUI();
+    }).catch(err => {
+        console.warn("Audio autoplay blocked by browser policy; user interaction required:", err);
+    });
+}
+
+function stopSirenAudio() {
+    sirenAudio.pause();
+    sirenAudio.currentTime = 0;
+    isSirenPlaying = false;
+    updateSirenUI();
+}
+
+function toggleSirenArmed() {
+    isSirenArmed = !isSirenArmed;
+    localStorage.setItem('praharix_siren_armed', isSirenArmed);
+    if (isSirenArmed) {
+        if (criticalThreatCount > 0) {
+            playSirenAudio();
+        } else {
+            // Briefly prime audio on user click to enable autoplay permissions
+            sirenAudio.play().then(() => {
+                sirenAudio.pause();
+                sirenAudio.currentTime = 0;
+            }).catch(() => {});
+            updateSirenUI();
+        }
+    } else {
+        stopSirenAudio();
+    }
+}
+
+function toggleManualSirenTest() {
+    if (isSirenPlaying) {
+        stopSirenAudio();
+    } else {
+        playSirenAudio();
+    }
+}
+
+// Initialize on page load
+updateSirenUI();
+if (isSirenArmed && criticalThreatCount > 0) {
+    playSirenAudio();
+}
+</script>
+</body>
+</html>

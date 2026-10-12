@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>PRAHARI-X Trend Analysis</title>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+
+background:#0b1220;
+color:white;
+font-family:Arial;
+margin:0;
+padding:0;
+
+}
+
+.header{
+
+background:#111827;
+padding:20px;
+text-align:center;
+border-bottom:2px solid cyan;
+
+}
+
+.card{
+
+background:#1f2937;
+padding:20px;
+margin:15px;
+border-radius:10px;
+
+}
+
+a{
+
+color:cyan;
+text-decoration:none;
+
+}
+
+canvas{
+
+background:white;
+border-radius:10px;
+padding:10px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>
+📈 Threat Trend Analysis
+</h1>
+
+<p>
+Threat Distribution Intelligence
+</p>
+
+</div>
+
+<div class="card">
+
+<a href="/">
+🏠 Back To Dashboard
+</a>
+
+</div>
+
+<div class="card">
+
+<h2>
+📊 Threat Trend Chart
+</h2>
+
+<canvas id="trendChart"></canvas>
+
+</div>
+
+<script>
+
+const ctx =
+document.getElementById(
+"trendChart"
+);
+
+new Chart(ctx, {
+
+type:"pie",
+
+data:{
+
+labels:
+{{ labels|tojson }},
+
+datasets:[{
+
+data:
+{{ values|tojson }}
+
+}]
+
+}
+
+});
+
+</script>
+
+</body>
+</html>
